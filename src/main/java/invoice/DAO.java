@@ -78,10 +78,25 @@ public class DAO {
 	 */
 	public void createInvoice(CustomerEntity customer, int[] productIDs, int[] quantities)
 		throws Exception {
-		String sql = "INSERT INTO INVOICE(?,?,?)";
+		String sql = "INSERT INTO INVOICE(CustomerID) VALUES(?)";
                 try(Connection co = myDataSource.getConnection();
-                    PreparedState stm = co.prepareStatement(sql)){
-                    
+                        PreparedStatement stm = co.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
+                        stm.setInt(1, customer.getCustomerId());
+                        stm.executeUpdate();
+                        ResultSet k = stm.getGeneratedKeys();
+                        k.next();
+                        for(int i = 0 ; i < productIDs.length ; i++){
+                            String sql2 = "INSERT INTO ITEM VALUES (?,?,?,?,(SELECT Price FROM PRODUCT WHERE ID=?))";
+                            try(Connection co2 = myDataSource.getConnection();
+                                    PreparedStatement stm2 = co2.prepareStatement(sql2)){
+                                stm2.setInt(1, k.getInt(1));
+                                stm2.setInt(2,i);
+                                stm2.setInt(3, productIDs[i]);
+                                stm2.setInt(4,quantities[i]);
+                                stm2.setInt(5, productIDs[i]);
+                                stm2.executeUpdate();
+                            }
+                        }
                 }
 	}
 
